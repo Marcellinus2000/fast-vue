@@ -7,27 +7,29 @@ from typing import List
 
 post.Base.metadata.create_all(bind=engine)
 
-router = APIRouter()
+router = APIRouter(
+    prefix= "/posts", tags= ["POSTS"]
+)
 
-@router.get('/posts', response_model=List[PostResponse])
+@router.get('/', response_model=List[PostResponse])
 def get_posts(db: Session = Depends(get_db)):
     
     posts = db.query(post.Post).all()
     return posts
 
-@router.get('/posts/{id}')
+@router.get('/{id}', response_model=PostResponse)
 def get_post(id : int, db: Session = Depends(get_db)):
 
     npost = db.query(post.Post).filter(post.Post.id == id).first()
-    print(post)
+    print(npost)
 
     if not npost:
         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} was not found")
-    return post
+    return npost
 
 
-@router.post('/posts', status_code=status.HTTP_201_CREATED, response_model=PostResponse)
-def create_posts(npost: CreatePost, db: Session = Depends(get_db)):
+@router.post('/', status_code=status.HTTP_201_CREATED, response_model=PostResponse)
+def create_post(npost: CreatePost, db: Session = Depends(get_db)):
     
     new_post = post.Post(**npost.model_dump())
 
@@ -37,7 +39,7 @@ def create_posts(npost: CreatePost, db: Session = Depends(get_db)):
     print(new_post)
     return new_post
 
-@router.put('/posts/{id}', status_code=status.HTTP_202_ACCEPTED, response_model=PostResponse)
+@router.put('/{id}', status_code=status.HTTP_202_ACCEPTED, response_model=PostResponse)
 def update_post(id: int, updated_post: CreatePost, db: Session = Depends(get_db)):
     
     post_q = db.query(post.Post).filter(post.Post.id == id)
@@ -49,7 +51,7 @@ def update_post(id: int, updated_post: CreatePost, db: Session = Depends(get_db)
     db.commit()
     return post_q.first()
 
-@router.delete('/posts/{id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id : int, db: Session = Depends(get_db)):
    
     npost = db.query(post.Post).filter(post.Post.id == id)
