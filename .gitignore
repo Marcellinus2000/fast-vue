@@ -1,3 +1,4 @@
 /server/__pycache__
 /.venv
 server/controllers/__pycache__
+.env

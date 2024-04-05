@@ -1,14 +1,18 @@
 from pydantic import BaseModel
 from datetime import datetime
+from schemas.user import UserResponse
 
 class PostBase(BaseModel):
     title: str
     content: str
     published: bool = True
+    owner: UserResponse
 
 
-class CreatePost(PostBase):
-    pass
+class CreatePost(BaseModel):
+    title: str
+    content: str
+    published: bool = True
 
 class PostResponse(PostBase):
     id : int
