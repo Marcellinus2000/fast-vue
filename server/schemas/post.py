@@ -19,3 +19,10 @@ class PostResponse(PostBase):
     created_at: datetime
     class Config:
         from_attributes = True
+
+class JoinPost(BaseModel):
+    post: PostResponse
+    votes: int
+
+    class Config:
+        from_attributes = True

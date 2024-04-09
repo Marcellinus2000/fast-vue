@@ -1,41 +1,50 @@
 from fastapi import status, HTTPException, Response, Depends, APIRouter
-from models import post
+from models import post,vote
 from database.database import engine, get_db
 from sqlalchemy.orm import Session
-from schemas.post import CreatePost, PostResponse
+from schemas.post import CreatePost, PostResponse, JoinPost
 from typing import List,Optional
 from services import auth
+from sqlalchemy import func
 
 post.Base.metadata.create_all(bind=engine)
+vote.Base.metadata.create_all(bind=engine)
 
 router = APIRouter(
     prefix= "/posts", tags= ["POSTS"]
 )
 
-
-@router.get('/', response_model=List[PostResponse])
-def get_posts(db: Session = Depends(get_db), current_user: int = Depends(auth.get_current_user), limit : int = 10, skip:int = 0, search:Optional[str]= ""):
+@router.get('/', response_model=List[JoinPost])
+def get_posts(db: Session = Depends(get_db), limit : int = 10, skip:int = 0, search:Optional[str]= ""):
     
-    print(current_user)
     # posts = db.query(post.Post).filter(post.Post.owner_id == current_user.id).all()
 
-    posts = db.query(post.Post).filter(post.Post.title.contains(search)).limit(limit).offset(skip).all()
+    # posts = db.query(post.Post).filter(post.Post.title.contains(search)).limit(limit).offset(skip).all()
+
+    query_post = db.query(post.Post, func.count(vote.Vote.post_id).label("Votes")).outerjoin(vote.Vote, post.Post.id == vote.Vote.post_id).group_by(post.Post.id).all()
+    
+    posts = [
+        {"post": post, "votes": vote_count}
+        for post, vote_count in query_post 
+    ]
+
     return posts
 
 
-@router.get('/{id}', response_model=PostResponse)
-def get_post(id : int, db: Session = Depends(get_db), current_user: int = Depends(auth.get_current_user)):
+@router.get('/{id}', response_model=List[JoinPost])
+def get_post(id : int, db: Session = Depends(get_db)):
 
-    print(current_user)
+    query_post = db.query(post.Post, func.count(vote.Vote.post_id).label("Votes")).outerjoin(vote.Vote, post.Post.id == vote.Vote.post_id).group_by(post.Post.id).filter(post.Post.id == id)
     
-    npost = db.query(post.Post).filter(post.Post.id == id).first()
-    print(npost)
+    posts = [
+        {"post": post, "votes": vote_count}
+        for post, vote_count in query_post 
+    ]
 
-    if not npost:
+    if not posts:
         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} was not found")
     
-    return npost
-
+    return posts
 
 @router.post('/', status_code=status.HTTP_201_CREATED, response_model=PostResponse)
 def create_post( npost: CreatePost, db: Session = Depends(get_db), current_user: int = Depends(auth.get_current_user)):
